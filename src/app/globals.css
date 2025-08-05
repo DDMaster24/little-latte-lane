@@ -1,26 +1,29 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  height: 100%; /* Full height for the root element */
+  margin: 0; /* Remove any default margins */
+  padding: 0; /* Remove any default padding */
+  background-color: #1A1A1A; /* Match darkBg (assuming #1A1A1A from your theme; adjust if different) */
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-darkBg text-neonText; /* Sets dark background and white text globally */
+  font-family: 'Inter', sans-serif; /* A clean font; we can change to something more neon-like later if you want */
+  min-height: 100vh; /* Ensure body covers full viewport height */
+  margin: 0; /* No margins */
+  padding: 0; /* No padding */
+}
+
+/* Basic neon button style for later use – we'll apply this to buttons soon */
+.neon-button {
+  @apply bg-transparent border-2 border-neonCyan text-neonCyan rounded-md px-4 py-2;
+  box-shadow: 0 0 5px #00FFFF, 0 0 10px #FF00FF; /* Subtle glow */
+  transition: all 0.3s ease;
+}
+
+.neon-button:hover {
+  @apply bg-neon-gradient text-white shadow-neon animate-pulse; /* Gradient fill, bigger glow, and pulse on hover */
 }
