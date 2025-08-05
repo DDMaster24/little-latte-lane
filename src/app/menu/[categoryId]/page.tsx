@@ -6,7 +6,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/types/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useCartStore } from '@/app/stores/cartStore'; // Updated to use Zustand cart store
+import { useCartStore } from '@/app/stores/cartStore';
 
 const supabase = createClientComponentClient<Database>();
 

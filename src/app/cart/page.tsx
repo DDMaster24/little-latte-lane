@@ -1,6 +1,6 @@
 'use client';
 
-import { useCartStore } from '@/app/stores/cartStore'; // Correct import for Zustand cart store
+import { useCartStore } from '@/app/stores/cartStore'; // Added import
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,17 +16,16 @@ import { useState } from 'react';
 const supabase = createClientComponentClient<Database>();
 
 export default function Cart() {
-  const cart = useCartStore((state) => state.items);
+  const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
+  const total = useCartStore((state) => state.total);
   const { profile } = useAuth();
   const router = useRouter();
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [address, setAddress] = useState(profile?.address || '');
   const [phone, setPhone] = useState(profile?.phone || '');
-
-  const total = useCartStore((state) => state.total());
 
   const handleCheckout = async () => {
     if (!profile) {
@@ -35,7 +34,7 @@ export default function Cart() {
       return;
     }
 
-    if (cart.length === 0) {
+    if (items.length === 0) {
       sonner.error('Cart is empty');
       return;
     }
@@ -45,7 +44,7 @@ export default function Cart() {
       .insert({
         user_id: profile.id,
         status: 'pending',
-        total,
+        total: total(),
         delivery_type: deliveryType,
       })
       .select('id')
@@ -56,7 +55,7 @@ export default function Cart() {
       return;
     }
 
-    const orderItems = cart.map((item) => ({
+    const orderItems = items.map((item) => ({
       order_id: order.id,
       menu_item_id: item.id,
       quantity: item.quantity,
@@ -81,7 +80,7 @@ export default function Cart() {
           <CardTitle className="text-neon-green">Your Cart</CardTitle>
         </CardHeader>
         <CardContent>
-          {cart.map((item) => (
+          {items.map((item) => (
             <div key={item.id} className="flex justify-between mb-2 items-center">
               <span>{item.name} x {item.quantity}</span>
               <span>R{item.price * item.quantity}</span>
@@ -92,7 +91,7 @@ export default function Cart() {
           ))}
           <div className="flex justify-between font-bold mt-4">
             <span>Total</span>
-            <span>R{total}</span>
+            <span>R{total()}</span>
           </div>
           <Select value={deliveryType} onValueChange={(value) => setDeliveryType(value as 'delivery' | 'pickup')}>
             <SelectTrigger className="mt-4 bg-black/70 border-neon-blue/50 text-neon-blue">
@@ -111,7 +110,7 @@ export default function Cart() {
           )}
           <div className="mt-4">
             <Label htmlFor="phone" className="text-neon-green">Phone</Label>
-            <Input id="address" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-black/70 border-neon-blue/50 text-neon-blue" />
+            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-black/70 border-neon-blue/50 text-neon-blue" />
           </div>
           <Button onClick={handleCheckout} className="mt-4 w-full bg-neon-green text-black hover:bg-neon-green/80">Checkout</Button>
         </CardContent>
