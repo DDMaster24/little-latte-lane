@@ -84,8 +84,8 @@ export async function performCheckout(userId: string, items: { id: number; quant
     await sendEmail(email, 'Order Confirmation', emailBody);
 
     return { success: true, orderId };
-  } catch (err: any) { // THIS IS THE FIX: Added ': any' to type err, so .message is safe
+  } catch (err: unknown) {
     console.error('Checkout error:', err);
-    return { success: false, error: err.message }; // Now .message works without error
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }

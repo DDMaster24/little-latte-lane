@@ -1,21 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { Database } from '@/types/supabase';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-type MenuItem = Database['public']['Tables']['menu_item']['Row'] & { stock: number };
+type MenuItem = Database['public']['Tables']['menu_items']['Row'] & { stock: number };
 
 type TopSellersQueryItem = {
-  menu_item_id: string;
+  menu_item_id: number;
   quantity: number;
-  menu_item: { name: string }[];
+  menu_items: { name: string }[];
 };
 
 type TopItem = { name: string; quantity: number };
@@ -24,12 +24,89 @@ export default function Analytics() {
   const supabase = createClientComponentClient<Database>();
   const { profile, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [totalSales, setTotalSales] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [todayOrders, setTodayOrders] = useState(0);
   const [lowStockItems, setLowStockItems] = useState<MenuItem[]>([]);
   const [topItems, setTopItems] = useState<TopItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchAnalytics = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Fetch total revenue
+      const { data: revenueData, error: revenueError } = await supabase
+        .from('orders')
+        .select('total');
+
+      if (revenueError) throw revenueError;
+      const totalRevenue = revenueData?.reduce((sum, order) => sum + order.total, 0) || 0;
+      setTotalRevenue(totalRevenue);
+
+      // Fetch total orders count
+      const { count: ordersCount, error: ordersError } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true });
+
+      if (ordersError) throw ordersError;
+      setTotalOrders(ordersCount || 0);
+
+      // Fetch today's orders count
+      const today = new Date().toISOString().split('T')[0];
+      const { count: todayCount, error: todayError } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', `${today}T00:00:00.000Z`)
+        .lt('created_at', `${today}T23:59:59.999Z`);
+
+      if (todayError) throw todayError;
+      setTodayOrders(todayCount || 0);
+
+      // Fetch low stock items (assuming stock exists; if not, add to table/types)
+      const { data: lowStockData, error: lowStockError } = await supabase
+        .from('menu_items')
+        .select('*')
+        .lt('stock', 10);
+
+      if (lowStockError) throw lowStockError;
+      setLowStockItems(lowStockData || []);
+
+      // Fetch order items with menu_items join for top sellers
+      const { data: orderItemsData, error: topError } = await supabase
+        .from('order_items')
+        .select(`
+          menu_item_id,
+          quantity,
+          menu_items (name)
+        `);
+
+      if (topError) throw topError;
+
+      // Aggregate top sellers client-side
+      const counts = new Map<number, { name: string; quantity: number }>();
+      orderItemsData?.forEach((item: TopSellersQueryItem) => {
+        const key = item.menu_item_id;
+        const menuItem = item.menu_items[0];
+        const name = menuItem ? menuItem.name : 'Unknown';
+        const current = counts.get(key) || { name, quantity: 0 };
+        current.quantity += item.quantity;
+        counts.set(key, current);
+      });
+
+      const sortedTop = Array.from(counts.values())
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
+      setTopItems(sortedTop);
+    } catch (err) {
+      setError(`Error fetching analytics: ${(err as Error).message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -53,7 +130,7 @@ export default function Analytics() {
 
     const menuItemSub = supabase
       .channel('menu-item-analytics')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_item' }, fetchAnalytics)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, fetchAnalytics)
       .subscribe();
 
     return () => {
@@ -61,78 +138,7 @@ export default function Analytics() {
       supabase.removeChannel(orderItemsSub);
       supabase.removeChannel(menuItemSub);
     };
-  }, [authLoading, profile, router, supabase]);
-
-  const fetchAnalytics = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Fetch done orders for total sales
-      const { data: doneOrders, error: salesError } = await supabase
-        .from('orders')
-        .select('total')
-        .eq('status', 'done');
-
-      if (salesError) throw salesError;
-      setTotalSales(doneOrders?.reduce((sum, order: { total: number }) => sum + (order.total || 0), 0) || 0);
-
-      // Fetch total orders today
-      const now = new Date();
-      const today = now.toISOString().slice(0, 10);
-      const startOfDay = `${today}T00:00:00Z`;
-      const endOfDay = `${today}T23:59:59Z`;
-      const { count: todayCount, error: todayError } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay);
-
-      if (todayError) throw todayError;
-      setTodayOrders(todayCount || 0);
-
-      // Fetch low stock items (assuming stock exists; if not, add to table/types)
-      const { data: lowStockData, error: lowStockError } = await supabase
-        .from('menu_item')
-        .select('*')
-        .lt('stock', 10);
-
-      if (lowStockError) throw lowStockError;
-      setLowStockItems(lowStockData || []);
-
-      // Fetch order items with menu_item join for top sellers
-      const { data: orderItemsData, error: topError } = await supabase
-        .from('order_items')
-        .select(`
-          menu_item_id,
-          quantity,
-          menu_item (name)
-        `);
-
-      if (topError) throw topError;
-
-      // Aggregate top sellers client-side
-      const counts = new Map<string, { name: string; quantity: number }>();
-      orderItemsData?.forEach((item: TopSellersQueryItem) => {
-        const key = item.menu_item_id;
-        const menuItem = item.menu_item[0];
-        const name = menuItem ? menuItem.name : 'Unknown';
-        const current = counts.get(key) || { name, quantity: 0 };
-        current.quantity += item.quantity;
-        counts.set(key, current);
-      });
-
-      const sortedTop = Array.from(counts.values())
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 5);
-
-      setTopItems(sortedTop);
-    } catch (err) {
-      setError(`Error fetching analytics: ${(err as Error).message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [authLoading, profile, router, supabase, fetchAnalytics]);
 
   const currency = new Intl.NumberFormat('en-ZA', {
     style: 'currency',
@@ -203,8 +209,19 @@ export default function Analytics() {
             <CardTitle>Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-green-400">{currency.format(totalSales)}</p>
+            <p className="text-3xl font-bold text-green-400">{currency.format(totalRevenue)}</p>
             <p className="text-sm text-gray-400 mt-1">Completed Orders Only</p>
+          </CardContent>
+        </Card>
+
+        {/* Total Orders */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-purple-400">{totalOrders}</p>
+            <p className="text-sm text-gray-400 mt-1">All time orders</p>
           </CardContent>
         </Card>
 

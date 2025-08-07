@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
 import { Textarea } from '@/components/ui/textarea';
+import Image from 'next/image';
 
 interface Category {
   id: number;
@@ -186,7 +187,7 @@ export default function ManageMenu() {
               <h4 className="text-lg font-semibold">{item.name}</h4>
               <p className="text-sm text-gray-400">{item.description}</p>
               {item.image_url && (
-                <img src={item.image_url} alt={item.name} className="mt-2 rounded h-32 object-cover w-full" />
+                <Image src={item.image_url} alt={item.name} className="mt-2 rounded h-32 object-cover w-full" width={200} height={128} />
               )}
               <p className="mt-1">Price: R{item.price}</p>
               <p>Stock: {item.stock}</p>

@@ -1,133 +1,96 @@
 'use client';
 
-import { useAuth } from '@/components/AuthProvider';
-import { useCartStore } from '@/app/stores/cartStore';
-import { useState } from 'react';
+import { useCartStore } from '@/stores/cartStore'; // Correct import for Zustand cart store
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import toast from 'react-hot-toast';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
+import { performCheckout } from './actions';
+import { toast } from 'react-hot-toast';
+import { useState } from 'react';
 
-export default function CartPage() {
-  const { user } = useAuth();
-  const {
-    items,
-    updateQuantity,
-    removeItem,
-    clearCart,
-    total,
-  } = useCartStore();
+export default function Cart() {
+  const cart = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const { profile } = useAuth();
+  const router = useRouter();
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
+  const [address, setAddress] = useState(profile?.address || '');
+  const [phone, setPhone] = useState(profile?.phone || '');
 
-  const [deliveryType, setDeliveryType] = useState<'pickup' | 'delivery'>('pickup');
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const total = useCartStore((state) => state.total());
 
   const handleCheckout = async () => {
-    if (!user) {
-      toast.error('Please log in to proceed with checkout.');
+    if (!profile) {
+      toast.error('Please log in to checkout');
+      router.push('/login');
       return;
     }
 
-    if (items.length === 0) {
-      toast.error('Your cart is empty.');
+    if (cart.length === 0) {
+      toast.error('Cart is empty');
       return;
     }
 
-    setIsCheckingOut(true);
-
-    // 👇 Replace this with your real checkout API logic
     try {
-      // Simulate delay
-      await new Promise((res) => setTimeout(res, 1500));
-      toast.success('Checkout successful!');
+      const items = cart.map(item => ({ id: item.id, quantity: item.quantity }));
+      await performCheckout(profile.id, items, total, deliveryType, profile.username || '');
+      
       clearCart();
+      toast.success('Order placed successfully');
+      router.push('/account');
     } catch (error) {
-      toast.error('Checkout failed.');
+      toast.error('Error placing order: ' + (error as Error).message);
     }
-
-    setIsCheckingOut(false);
   };
 
   return (
-    <main className="max-w-4xl mx-auto p-6 text-neonText">
-      <h1 className="text-3xl font-bold mb-6 text-center bg-neon-gradient bg-clip-text text-transparent animate-pulse">
-        Your Cart
-      </h1>
-
-      {items.length === 0 ? (
-        <p className="text-center text-gray-400">Your cart is empty.</p>
-      ) : (
-        <>
-          <Table className="mb-6">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>R{item.price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateQuantity(item.id, parseInt(e.target.value))
-                      }
-                      className="w-16"
-                    />
-                  </TableCell>
-                  <TableCell>R{(item.price * item.quantity).toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      onClick={() => removeItem(item.id)}
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      Remove
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex gap-4 items-center">
-              <label htmlFor="delivery" className="font-semibold">Delivery Type:</label>
-              <select
-                id="delivery"
-                value={deliveryType}
-                onChange={(e) => setDeliveryType(e.target.value as 'pickup' | 'delivery')}
-                className="bg-gray-800 text-white p-2 rounded"
-              >
-                <option value="pickup">Pickup</option>
-                <option value="delivery">Delivery (within estate)</option>
-              </select>
+    <div className="p-4">
+      <Card className="bg-black/50 backdrop-blur-md border-neon-green/50">
+        <CardHeader>
+          <CardTitle className="text-neon-green">Your Cart</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {cart.map((item) => (
+            <div key={item.id} className="flex justify-between mb-2 items-center">
+              <span>{item.name} x {item.quantity}</span>
+              <span>R{item.price * item.quantity}</span>
+              <Button variant="outline" onClick={() => updateQuantity(item.id, item.quantity + 1)} className="ml-2 border-neon-blue/50 text-neon-blue">+</Button>
+              <Button variant="outline" onClick={() => updateQuantity(item.id, item.quantity - 1)} className="ml-2 border-neon-blue/50 text-neon-blue">-</Button>
+              <Button variant="destructive" onClick={() => removeItem(item.id)} className="ml-2 bg-red-500/20 text-red-300">Remove</Button>
             </div>
-            <div className="text-xl font-bold">Total: R{total().toFixed(2)}</div>
+          ))}
+          <div className="flex justify-between font-bold mt-4">
+            <span>Total</span>
+            <span>R{total}</span>
           </div>
-
-          <div className="flex gap-4">
-            <Button
-              onClick={handleCheckout}
-              disabled={isCheckingOut}
-              className="w-full"
-            >
-              {isCheckingOut ? 'Processing...' : 'Checkout & Pay'}
-            </Button>
-            <Button variant="secondary" onClick={clearCart} className="w-full">
-              Clear Cart
-            </Button>
+          <Select value={deliveryType} onValueChange={(value) => setDeliveryType(value as 'delivery' | 'pickup')}>
+            <SelectTrigger className="mt-4 bg-black/70 border-neon-blue/50 text-neon-blue">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-black/90 border-neon-blue/50">
+              <SelectItem value="delivery">Delivery</SelectItem>
+              <SelectItem value="pickup">Pickup</SelectItem>
+            </SelectContent>
+          </Select>
+          {deliveryType === 'delivery' && (
+            <div className="mt-4">
+              <Label htmlFor="address" className="text-neon-green">Address</Label>
+              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="bg-black/70 border-neon-blue/50 text-neon-blue" />
+            </div>
+          )}
+          <div className="mt-4">
+            <Label htmlFor="phone" className="text-neon-green">Phone</Label>
+            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-black/70 border-neon-blue/50 text-neon-blue" />
           </div>
-        </>
-      )}
-    </main>
+          <Button onClick={handleCheckout} className="mt-4 w-full bg-neon-green text-black hover:bg-neon-green/80">Checkout</Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

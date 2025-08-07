@@ -5,7 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { Database } from '@/types/supabase';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js'; // Added this import for proper typing of real-time payload
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/components/AuthProvider';
 import {
   Table,
   TableBody,
@@ -151,8 +151,8 @@ export default function ManageOrders() {
 
   const filteredOrders = filterStatus === 'all' ? orders : orders.filter((order) => order.status === filterStatus);
 
-  const handleUpdateStatus = async (id: string, newStatus: typeof statusOptions[number]) => {
-    const response = await updateOrderStatus(id, newStatus);
+  const handleUpdateStatus = async (id: number, newStatus: typeof statusOptions[number]) => {
+    const response = await updateOrderStatus(id.toString(), newStatus);
     if (response.success) {
       toast.success('Order status updated');
     } else {
@@ -161,7 +161,7 @@ export default function ManageOrders() {
     // No need for fetchOrders; real-time will handle
   };
 
-  const handleAssignStaff = async (orderId: string, staffId: string | null) => {
+  const handleAssignStaff = async (orderId: number, staffId: string | null) => {
     const { error } = await supabase.from('orders').update({ assigned_staff_id: staffId }).eq('id', orderId);
     if (error) {
       setError(`Error assigning staff: ${error.message}`);
@@ -246,7 +246,7 @@ export default function ManageOrders() {
           ) : (
             filteredOrders.map((order) => (
               <TableRow key={order.id} className="border-b border-neon-green/10 hover:bg-neon-green/5">
-                <TableCell>{order.id.slice(0, 8)}...</TableCell>
+                <TableCell>{order.id.toString().slice(0, 8)}...</TableCell>
                 <TableCell>{order.profiles.username}</TableCell>
                 <TableCell>R{order.total?.toFixed(2) ?? '0.00'}</TableCell>
                 <TableCell>{order.delivery_type}</TableCell>

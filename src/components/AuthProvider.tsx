@@ -16,6 +16,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  loading: boolean;
   logout: () => Promise<void>;
 }
 
@@ -23,18 +24,22 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   profile: null,
+  loading: true,
   logout: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
         fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
       }
     });
 
@@ -44,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
+        setLoading(false);
       }
     });
 
@@ -51,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function fetchProfile(userId: string) {
+    setLoading(true);
     const { data, error } = await supabase
       .from('profiles')
       .select('id, role, address, phone, username') // ✅ SELECT id here
@@ -63,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setProfile(data);
     }
+    setLoading(false);
   }
 
   async function logout() {
@@ -72,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user || null, profile, logout }}>
+    <AuthContext.Provider value={{ session, user: session?.user || null, profile, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

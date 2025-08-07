@@ -36,7 +36,7 @@ export default function Header() {
           <h1 className="text-4xl font-bold bg-neon-gradient bg-clip-text text-transparent">
             Little Latte Lane
           </h1>
-          <p className="text-base">Roberts' Cafe and Deli</p>
+          <p className="text-base">Roberts&apos; Cafe and Deli</p>
         </div>
       </div>
 

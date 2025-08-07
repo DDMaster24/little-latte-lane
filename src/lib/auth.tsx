@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     fetchProfile();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         fetchProfile();
       } else if (event === 'SIGNED_OUT') {

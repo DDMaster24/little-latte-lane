@@ -5,7 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { Database } from '@/types/supabase';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/components/AuthProvider';
 import {
   Table,
   TableBody,
@@ -119,7 +119,7 @@ export default function ManageBookings() {
 
   const filteredBookings = filterStatus === 'all' ? bookings : bookings.filter((booking) => booking.status === filterStatus);
 
-  const handleUpdateStatus = async (id: string, newStatus: typeof statusOptions[number]) => {
+  const handleUpdateStatus = async (id: number, newStatus: typeof statusOptions[number]) => {
     const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id);
     if (error) {
       setError(`Error updating status: ${error.message}`);
@@ -191,11 +191,11 @@ export default function ManageBookings() {
           ) : (
             filteredBookings.map((booking) => (
               <TableRow key={booking.id} className="border-b border-neon-green/10 hover:bg-neon-green/5">
-                <TableCell>{booking.id.slice(0, 8)}...</TableCell>
+                <TableCell>{booking.id.toString().slice(0, 8)}...</TableCell>
                 <TableCell>{booking.profiles.username}</TableCell>
                 <TableCell>{booking.type}</TableCell>
-                <TableCell>{new Date(booking.date).toLocaleDateString()}</TableCell>
-                <TableCell>{booking.time_slot}</TableCell>
+                <TableCell>{new Date(booking.date_time).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(booking.date_time).toLocaleTimeString()}</TableCell>
                 <TableCell>
                   <Badge
                     className={

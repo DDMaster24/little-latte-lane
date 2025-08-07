@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ClientWrapper } from './ClientWrapper';
@@ -11,12 +11,17 @@ export const metadata: Metadata = {
   title: 'Little Latte Lane',
   description: 'Food ordering and booking for estate residents',
   manifest: '/manifest.json',
-  themeColor: '#0f0f0f',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   icons: {
     icon: '/icons/icon-192.png',
     apple: '/icons/icon-192.png',
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#0f0f0f',
 };
 
 export default function RootLayout({

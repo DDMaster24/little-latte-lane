@@ -11,7 +11,7 @@ export type Database = {
     Tables: {
       orders: {
         Row: {
-          id: string;
+          id: number;
           user_id: string;
           status: string;
           total: number;
@@ -24,9 +24,9 @@ export type Database = {
       };
       order_items: {
         Row: {
-          id: string;
-          order_id: string;
-          menu_item_id: string;
+          id: number;
+          order_id: number;
+          menu_item_id: number;
           quantity: number;
         };
         Insert: Partial<Database['public']['Tables']['order_items']['Row']>;
@@ -43,27 +43,54 @@ export type Database = {
         Insert: Partial<Database['public']['Tables']['profiles']['Row']>;
         Update: Partial<Database['public']['Tables']['profiles']['Row']>;
       };
-      menu_item: {
+      menu_items: {
         Row: {
-          id: string;
+          id: number;
           name: string;
+          description: string | null;
           price: number;
+          category_id: number;
+          image_url: string | null;
+          stock: number;
+          created_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['menu_item']['Row']>;
-        Update: Partial<Database['public']['Tables']['menu_item']['Row']>;
+        Insert: Partial<Database['public']['Tables']['menu_items']['Row']>;
+        Update: Partial<Database['public']['Tables']['menu_items']['Row']>;
+      };
+      categories: {
+        Row: {
+          id: number;
+          name: string;
+          created_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['categories']['Row']>;
+        Update: Partial<Database['public']['Tables']['categories']['Row']>;
       };
       bookings: {
         Row: {
-          id: string;
+          id: number;
           user_id: string;
           type: 'table' | 'golf';
-          date: string;
-          time_slot: string;
+          date_time: string;
+          number_of_people: number;
+          pre_order: boolean;
           status: 'pending' | 'confirmed' | 'cancelled';
           created_at: string;
         };
         Insert: Partial<Database['public']['Tables']['bookings']['Row']>;
         Update: Partial<Database['public']['Tables']['bookings']['Row']>;
+      };
+      requests: {
+        Row: {
+          id: number;
+          staff_id: string;
+          item_id: number;
+          message: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['requests']['Row']>;
+        Update: Partial<Database['public']['Tables']['requests']['Row']>;
       };
     };
   };

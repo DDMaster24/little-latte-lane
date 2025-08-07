@@ -69,7 +69,7 @@ export default function KitchenDashboard() {
     return () => {
       void orderSub.unsubscribe();
     };
-  }, [profile]);
+  }, [profile, router]);
 
   const fetchOrders = async () => {
     const { data } = await supabase

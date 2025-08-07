@@ -23,9 +23,9 @@ export default function StaffPanel() {
   const fetchUsers = async () => {
     const { data } = await supabase
       .from('profiles')
-      .select('id, role, auth.users(email)')
+      .select('id, role, username')
       .order('id');
-    setUsers(data?.map((d: any) => ({ id: d.id, email: d.auth_users.email, role: d.role })) || []);
+    setUsers(data?.map((d: { id: string; role: string; username: string }) => ({ id: d.id, email: d.username, role: d.role })) || []);
   };
 
   const handleUpdateRole = async (id: string, newRole: string) => {
